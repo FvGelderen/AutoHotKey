@@ -1,4 +1,4 @@
-﻿/*
+/*
 Language:			English
 Platform:			Windows 10/11 32-bit or 64-bit
 Author:				Ferry van Gelderen (ferry@provolve.nl)
@@ -16,23 +16,11 @@ AppName = MSIX Legacy Application Launcher
 Version = 1.0.0.2
 
 StringTrimRight, FileName, A_ScriptName, 4
-IfExist, %A_Temp%\%FileName%.log
-	FileDelete, %A_Temp%\%FileName%.log
 
 IfNotExist, %A_ScriptDir%\%FileName%.ini
 	{
 	MsgBox, 64, %AppName% %Version%, Runs one or more external programs with the ability to set environments variables and perform basic script actions.`n`nPlease read the "%AppName%" document file for information on how to use this program.`n`nThis software is provided "as is". Use of the software is free and at your own risk.`n`nCopyright © 2023 Provolve IT B.V.
 	ExitApp, 0
-	}
-
-IniRead, NoLog, %A_ScriptDir%\%FileName%.ini, MAIN, NoLog
-If NoLog != 1
-	{
-	FileAppend, %A_Now%`tInfo`t%AppName% %Version% started for username: "%A_UserName%" on computer name: "%A_ComputerName%"`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tOperating System version: %A_OSVersion% (64-bit=%A_Is64bitOS%)`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tMain working directory: %A_ScriptDir%`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tMain executable name: %A_ScriptName%`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tMain INI file name: %FileName%.ini`n, %A_Temp%\%FileName%.log
 	}
 
 ; --------------------------------------------------------------- Dark Mode GUI Settings ---------------------------------------------------------------
@@ -58,30 +46,26 @@ if (A_OSVersion >= "10.0.17763" && SubStr(A_OSVersion, 1, 3) = "10.")
 		attr := 20
 	}
 
-; --------------------------------------------------------------- Collect MSIX Package Information ---------------------------------------------------------------
+; --------------------------------------------------------------- Collect Startup and MSIX Package Information ---------------------------------------------------------------
+IniRead, NoLog, %A_ScriptDir%\%FileName%.ini, MAIN, NoLog
+AppUserModelId := GetCurrentApplicationUserModelId(256)
+If AppUserModelId
+	{
+	StringSplit, AppUserModelIdAppiD, AppUserModelId, !
+	AppID :=  AppUserModelIdAppiD2
+	LogFile := A_Temp . "\" . FileName . "_" . AppID . ".log"
+	}
+Else
+	{
+	AppId =
+	LogFile := A_Temp . "\" . FileName . ".log"
+	}
 PackagePath := GetCurrentPackagePath(256)
 If PackagePath
 	AppxManifestFile := PackagePath . "\AppxManifest.xml"
 Else
 	AppxManifestFile =
-If NoLog != 1
-	{
-	FileAppend, %A_Now%`tInfo`tMSIX PackagePath: %PackagePath%`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tMSIX ManifestFile: %AppxManifestFile%`n, %A_Temp%\%FileName%.log
-	}		
-IfExist, %AppxManifestFile%
-	{
-	If NoLog != 1
-		FileAppend, %A_Now%`tInfo`tMSIX AppxManifest.xml file found.`n, %A_Temp%\%FileName%.log		
-	}
-Else
-	{
-	If NoLog != 1
-		FileAppend, %A_Now%`tWarning`tMSIX AppxManifest.xml file not found.`n, %A_Temp%\%FileName%.log			
-	}
 PackageFullName := GetCurrentPackageFullName(128)
-If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tMSIX PackageFullName: %PackageFullName%`n, %A_Temp%\%FileName%.log
 PackageFamilyName := GetCurrentPackageFamilyName(128)
 If PackageFamilyName
 	{
@@ -94,28 +78,30 @@ Else
 	PublisherId =
 	PackageName =
 	}
+IfExist, %LogFile%
+	FileDelete, %LogFile%
 If NoLog != 1
 	{
-	FileAppend, %A_Now%`tInfo`tMSIX PackageName: %PackageName%`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tMSIX PublisherId: %PublisherId%`n, %A_Temp%\%FileName%.log
-	FileAppend, %A_Now%`tInfo`tMSIX PackageFamilyName: %PackageFamilyName%`n, %A_Temp%\%FileName%.log
-	}
-AppUserModelId := GetCurrentApplicationUserModelId(256)
-If AppUserModelId
-	{
-	StringSplit, AppUserModelIdAppiD, AppUserModelId, !
-	AppID :=  AppUserModelIdAppiD2	
-	If NoLog != 1
-		{
-		FileAppend, %A_Now%`tInfo`tMSIX AppUserModelId: %AppUserModelId%`n, %A_Temp%\%FileName%.log
-		FileAppend, %A_Now%`tInfo`tMSIX AppId: %AppId%`n, %A_Temp%\%FileName%.log
-		}
-	}
-Else
-	{
-	AppId =
-	If NoLog != 1
-		FileAppend, %A_Now%`tWarning`tAppId not found.`n, %A_Temp%\%FileName%.log		
+	FileAppend, %A_Now%`tInfo`t%AppName% %Version% started for username: "%A_UserName%" on computer name: "%A_ComputerName%"`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tOperating System version: %A_OSVersion% (64-bit=%A_Is64bitOS%)`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMain working directory: %A_ScriptDir%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMain executable name: %A_ScriptName%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMain INI file name: %FileName%.ini`n, %LogFile%	
+	FileAppend, %A_Now%`tInfo`tMSIX PackagePath: %PackagePath%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMSIX ManifestFile: %AppxManifestFile%`n, %LogFile%
+	IfExist, %AppxManifestFile%
+		FileAppend, %A_Now%`tInfo`tMSIX AppxManifest.xml file found.`n, %LogFile%
+	Else
+		FileAppend, %A_Now%`tWarning`tMSIX AppxManifest.xml file not found.`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMSIX PackageFullName: %PackageFullName%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMSIX PackageName: %PackageName%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMSIX PublisherId: %PublisherId%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMSIX PackageFamilyName: %PackageFamilyName%`n, %LogFile%
+	FileAppend, %A_Now%`tInfo`tMSIX AppUserModelId: %AppUserModelId%`n, %LogFile%
+	If AppID
+		FileAppend, %A_Now%`tInfo`tMSIX AppId: %AppId%`n, %LogFile%
+	Else
+		FileAppend, %A_Now%`tWarning`tAppId not found.`n, %LogFile%
 	}
 
 ; --------------------------------------------------------------- Skip MAIN GUI for Single App ---------------------------------------------------------------
@@ -127,6 +113,8 @@ If App2 = ERROR
 	IniRead, Name, %A_ScriptDir%\%FileName%.ini, MAIN, App1
 	If Name != ERROR
 		{
+		If NoLog != 1
+			FileAppend, %A_Now%`tInfo`tSingle application entry found for: %Name%`n, %LogFile%
 		Transform, Name, Deref, %Name%
 		ShowMAINGUI = 0
 		AppNumber = App1
@@ -146,6 +134,8 @@ Loop
 		{
 		If Name = %AppId%
 			{
+			If NoLog != 1
+				FileAppend, %A_Now%`tInfo`tMSIX Application Id match found for: %Name%`n, %LogFile%
 			Transform, Name, Deref, %Name%
 			ShowMAINGUI = 0
 			AppNumber = %App%
@@ -192,7 +182,7 @@ If Icon
 ShowMAINGUI = 1
 WaitForClose = 0
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tShow Main GUI.`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tShow Main GUI.`n, %LogFile%
 Return
 
 ; --------------------------------------------------------------- Exit Application ---------------------------------------------------------------
@@ -201,7 +191,7 @@ while WaitForClose = 1
 	Sleep, 100
 DllCall("DestroyIcon", "ptr", hIcon)
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`t%AppName% %Version% stopped.`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`t%AppName% %Version% stopped.`n, %LogFile%
 ExitApp, %ErrorNumber%
 Return
 
@@ -250,7 +240,7 @@ If ShowMAINGUI = 1
 	AppNumber := "App" . Line
 	}
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tRunning %AppNumber%: %Name%...`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tRunning %AppNumber%: %Name%...`n, %LogFile%
 ; --------------------------------------------------------------- Set ENVironment Variables ---------------------------------------------------------------
 SetEnv("SetEnv", AppNumber)
 ; --------------------------------------------------------------- Get ENVironment Variables ---------------------------------------------------------------
@@ -271,14 +261,14 @@ Script("PreLaunch", AppNumber)
 IniRead, Target, %A_ScriptDir%\%FileName%.ini, %AppNumber%, Target, %A_Space%
 Transform, Target, Deref, %Target%
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tTarget=%Target%`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tTarget=%Target%`n, %LogFile%
 IniRead, WorkingDir, %A_ScriptDir%\%FileName%.ini, %AppNumber%, WorkingDir, %A_Space%
 Transform, WorkingDir, Deref, %WorkingDir%
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tWorkingDir=%WorkingDir%`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tWorkingDir=%WorkingDir%`n, %LogFile%
 IniRead, Options, %A_ScriptDir%\%FileName%.ini, %AppNumber%, Options, %A_Space%
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tOptions=%Options%`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tOptions=%Options%`n, %LogFile%
 ParamString =
 Loop
 	{
@@ -289,25 +279,27 @@ Loop
 	If CurrentParam
 		{
 		Transform, CurrentParam, Deref, %CurrentParam%
+		IfInString, CurrentParam, %A_Space%
+			CurrentParam = "%CurrentParam%"
 		If NoLog != 1
-			FileAppend, %A_Now%`tInfo`t%Param%=%CurrentParam%`n, %A_Temp%\%FileName%.log
+			FileAppend, %A_Now%`tInfo`t%Param%=%CurrentParam%`n, %LogFile%
 		ParamString = %ParamString% %CurrentParam%
 		}
 	}
 IniRead, Wait, %A_ScriptDir%\%FileName%.ini, %AppNumber%, Wait
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tWait=%Wait%`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tWait=%Wait%`n, %LogFile%
 IniRead, RunInPackage, %A_ScriptDir%\%FileName%.ini, %AppNumber%, RunInPackage, 0
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tRunInPackage=%RunInPackage%`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tRunInPackage=%RunInPackage%`n, %LogFile%
 ; --------------------------------------------------------------- Execute Target ---------------------------------------------------------------
 If NoLog != 1
-	FileAppend, %A_Now%`tInfo`tStarting Target...`n, %A_Temp%\%FileName%.log
+	FileAppend, %A_Now%`tInfo`tStarting Target...`n, %LogFile%
 EmptyMem()
 If Target = ERROR
 	{
 	If NoLog != 1
-		FileAppend, %A_Now%`tError`tTarget property is not found.`n, %A_Temp%\%FileName%.log
+		FileAppend, %A_Now%`tError`tTarget property is not found.`n, %LogFile%
 	}
 Else
 	{
@@ -316,19 +308,19 @@ Else
 		If RunInPackage = 0
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tRun and wait: %Target% %ParamString%`n, %A_Temp%\%FileName%.log			
+				FileAppend, %A_Now%`tInfo`tRun and wait: %Target% %ParamString%`n, %LogFile%			
 			RunWait, %Target% %ParamString%, %WorkingDir%, %Options% UseErrorLevel, pID
 			}
 		If RunInPackage = 1
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tRun and wait: powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %A_Temp%\%FileName%.log				
+				FileAppend, %A_Now%`tInfo`tRun and wait: powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %LogFile%			
 			RunWait, powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway, %WorkingDir%, %Options% UseErrorLevel, pID
 			}
 		If RunInPackage = 2
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tRun and wait (Elevated): powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %A_Temp%\%FileName%.log			
+				FileAppend, %A_Now%`tInfo`tRun and wait (Elevated): powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %LogFile%		
 			RunWait, *RunAs powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway, %WorkingDir%, %Options% UseErrorLevel, pID
 			}
 		If ErrorLevel = ERROR
@@ -336,12 +328,12 @@ Else
 			ErrorNumber = %A_LastError%
 			ErrorMessage := GetSysErrorText(ErrorNumber)
 			If NoLog != 1
-				FileAppend, %A_Now%`tError`tTarget launch failed with return code: %ErrorNumber% Message: %ErrorMessage%`n, %A_Temp%\%FileName%.log
+				FileAppend, %A_Now%`tError`tTarget launch failed with return code: %ErrorNumber% Message: %ErrorMessage%`n, %LogFile%
 			}
 		Else
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tTarget with process ID %pID% successfully stopped with return code: %A_LastError%`n, %A_Temp%\%FileName%.log
+				FileAppend, %A_Now%`tInfo`tTarget with process ID %pID% successfully stopped with return code: %A_LastError%`n, %LogFile%
  ;--------------------------------------------------------------- Execute Post-Exit SCRIPT actions ---------------------------------------------------------------
 			WaitForClose = 1
 			Script("PostExit", AppNumber)
@@ -355,19 +347,19 @@ Else
 		If RunInPackage = 0
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tRun: %Target% %ParamString%`n, %A_Temp%\%FileName%.log			
+				FileAppend, %A_Now%`tInfo`tRun: %Target% %ParamString%`n, %LogFile%			
 			Run, %Target% %ParamString%, %WorkingDir%, %Options% UseErrorLevel, pID
 			}
 		If RunInPackage = 1
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tRun: powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %A_Temp%\%FileName%.log			
+				FileAppend, %A_Now%`tInfo`tRun: powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %LogFile%			
 			Run, powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command '%Target%' -Args '%ParamString%' -PreventBreakaway, %WorkingDir%, %Options% UseErrorLevel, pID
 			}
 		If RunInPackage = 2
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tRun (Elevated): powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %A_Temp%\%FileName%.log				
+				FileAppend, %A_Now%`tInfo`tRun (Elevated): powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command "%Target%" -Args '%ParamString%' -PreventBreakaway`n, %LogFile%				
 			Run, *RunAs powershell.exe Invoke-CommandInDesktopPackage -AppId '%AppId%' -PackageFamilyName '%PackageFamilyName%' -Command '%Target%' -Args '%ParamString%' -PreventBreakaway, %WorkingDir%, %Options% UseErrorLevel, pID
 			}
 		If ErrorLevel = ERROR
@@ -375,12 +367,12 @@ Else
 			ErrorNumber = %A_LastError%
 			ErrorMessage := GetSysErrorText(ErrorNumber)
 			If NoLog != 1
-				FileAppend, %A_Now%`tError`tError Running: %Target% from %WorkingDir%. Return code: %ErrorNumber% Message: %ErrorMessage%`n, %A_Temp%\%FileName%.log
+				FileAppend, %A_Now%`tError`tError Running: %Target% from %WorkingDir%. Return code: %ErrorNumber% Message: %ErrorMessage%`n, %LogFile%
 			}
 		Else
 			{
 			If NoLog != 1
-				FileAppend, %A_Now%`tInfo`tTarget successfully started with process ID: %pID%`n, %A_Temp%\%FileName%.log
+				FileAppend, %A_Now%`tInfo`tTarget successfully started with process ID: %pID%`n, %LogFile%
 			}
 		If ShowMAINGUI = 0
 			{
@@ -471,15 +463,10 @@ If GETENVGUI = 1
 	SendMessage, 0x80, 0, hIcon 
 	SendMessage, 0x80, 1, hIcon
 	If NoLog != 1
-		FileAppend, %A_Now%`tInfo`tShow GetEnv GUI.`n, %A_Temp%\%FileName%.log	
+		FileAppend, %A_Now%`tInfo`tShow GetEnv GUI.`n, %LogFile%	
 	}
-Loop
-	{
-	If GETENVGUI = 0
-		Break
-	Else
-		Sleep, 500
-	}
+While GETENVGUI = 1
+	Sleep, 100
 Return
 
 GETENVGuiEscape:
@@ -508,13 +495,13 @@ Loop, %EnvCount%
 			{
 			ErrorNumber = %A_LastError%
 			ErrorMessage := GetSysErrorText(ErrorNumber)			
-			FileAppend, %A_Now%`tError`tError setting user environment: "%EnvName%" with value "%EnvValue%". Error: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log
+			FileAppend, %A_Now%`tError`tError setting user environment: "%EnvName%" with value "%EnvValue%". Error: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 			}
 		}
 	Else
 		{
 		If NoLog != 1
-			FileAppend, %A_Now%`tInfo`tUser environment variable "%EnvName%" with value "%EnvValue%" set successfully.`n, %A_Temp%\%FileName%.log
+			FileAppend, %A_Now%`tInfo`tUser environment variable "%EnvName%" with value "%EnvValue%" set successfully.`n, %LogFile%
 		EnvSet = 1
 		}	
 	}
@@ -632,6 +619,7 @@ GetCurrentApplicationUserModelId(applicationUserModelIdLength)
 SetEnv(SetEnv, AppNumber)
 	{
 	global FileName
+	global LogFile
 	EnvSet = 0
 	Loop
 		{
@@ -661,13 +649,13 @@ SetEnv(SetEnv, AppNumber)
 					{
 					ErrorNumber = %A_LastError%
 					ErrorMessage := GetSysErrorText(ErrorNumber)			
-					FileAppend, %A_Now%`tError`tError setting user environment: "%EnvName%" with value "%EnvValue%". Error: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tError`tError setting user environment: "%EnvName%" with value "%EnvValue%". Error: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 					}
 				}
 			Else
 				{
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tUser environment variable "%EnvName%" with value "%EnvValue%" set successfully.`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tUser environment variable "%EnvName%" with value "%EnvValue%" set successfully.`n, %LogFile%
 				EnvSet = 1
 				}
 			}
@@ -683,6 +671,7 @@ SetEnv(SetEnv, AppNumber)
 Script(Line, AppNumber)
 	{
 	global FileName
+	global LogFile
 	Loop
 		{
 		LineNumber := Line . A_Index
@@ -711,7 +700,7 @@ Script(Line, AppNumber)
 				Transform, FirstItem, Deref, %FirstItem%
 				Transform, SecondItem, Deref, %SecondItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tCopy file(s) from "%FirstItem%" to "%SecondItem%" overwrites existing file(s) is "%ThirdItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tCopy file(s) from "%FirstItem%" to "%SecondItem%" overwrites existing file(s) is "%ThirdItem%"...`n, %LogFile%
 				FileCopy, %FirstItem%, %SecondItem%, %ThirdItem%
 				If NoLog != 1
 					{
@@ -719,12 +708,12 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)				
-						FileAppend, %A_Now%`tWarning`tCopy file(s) stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tWarning`tCopy file(s) stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					IfExist, %SecondItem%
-						FileAppend, %A_Now%`tInfo`t"%SecondItem%" exist.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tInfo`t"%SecondItem%" exist.`n, %LogFile%
 					Else	
-						FileAppend, %A_Now%`tWarning`t"%SecondItem%" not found.`n, %A_Temp%\%FileName%.log	
+						FileAppend, %A_Now%`tWarning`t"%SecondItem%" not found.`n, %LogFile%
 					}
 				}
 			If ScriptItem = FolderCopy
@@ -732,7 +721,7 @@ Script(Line, AppNumber)
 				Transform, FirstItem, Deref, %FirstItem%
 				Transform, SecondItem, Deref, %SecondItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tCopy folder from "%FirstItem%" to "%SecondItem%" overwrites existing file(s) and folder(s) is "%ThirdItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tCopy folder from "%FirstItem%" to "%SecondItem%" overwrites existing file(s) and folder(s) is "%ThirdItem%"...`n, %LogFile%
 				FileCopyDir, %FirstItem%, %SecondItem%, %ThirdItem%
 				If NoLog != 1
 					{
@@ -740,19 +729,19 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)				
-						FileAppend, %A_Now%`tWarning`tCopy folder stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tCopy folder stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					IfExist, %SecondItem%
-						FileAppend, %A_Now%`tInfo`t"%SecondItem%" exist.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tInfo`t"%SecondItem%" exist.`n, %LogFile%
 					Else	
-						FileAppend, %A_Now%`tWarning`t"%SecondItem%" not found.`n, %A_Temp%\%FileName%.log						
+						FileAppend, %A_Now%`tWarning`t"%SecondItem%" not found.`n, %LogFile%
 					}
 				}
 			If ScriptItem = FolderCreate
 				{
 				Transform, FirstItem, Deref, %FirstItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tCreate folder "%FirstItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tCreate folder "%FirstItem%"...`n, %LogFile%
 				FileCreateDir, %FirstItem%
 				If NoLog != 1
 					{
@@ -760,19 +749,19 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)				
-						FileAppend, %A_Now%`tWarning`tCreate folder stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tCreate folder stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					IfExist, %FirstItem%
-						FileAppend, %A_Now%`tInfo`t"%FirstItem%" exist.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tInfo`t"%FirstItem%" exist.`n, %LogFile%
 					Else	
-						FileAppend, %A_Now%`tWarning`t"%FirstItem%" not found.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tWarning`t"%FirstItem%" not found.`n, %LogFile%
 					}
 				}	
 			If ScriptItem = FileDelete
 				{
 				Transform, FirstItem, Deref, %FirstItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tDelete file "%FirstItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tDelete file "%FirstItem%"...`n, %LogFile%
 				FileDelete, %FirstItem%
 				If NoLog != 1
 					{
@@ -780,19 +769,19 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)				
-						FileAppend, %A_Now%`tWarning`tDelete file stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tDelete file stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					IfNotExist, %FirstItem%
-						FileAppend, %A_Now%`tInfo`t"%FirstItem%" not found.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tInfo`t"%FirstItem%" not found.`n, %LogFile%
 					Else	
-						FileAppend, %A_Now%`tWarning`t"%FirstItem%" still exist.`n, %A_Temp%\%FileName%.log						
+						FileAppend, %A_Now%`tWarning`t"%FirstItem%" still exist.`n, %LogFile%
 					}
 				}						
 			If ScriptItem = FolderDelete
 				{
 				Transform, FirstItem, Deref, %FirstItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tDelete folder "%FirstItem%" removing all files and subdirectories...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tDelete folder "%FirstItem%" removing all files and subdirectories...`n, %LogFile%
 				FileRemoveDir, %FirstItem%, 1
 				If NoLog != 1
 					{
@@ -800,12 +789,12 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)				
-						FileAppend, %A_Now%`tWarning`tDelete folder stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tDelete folder stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					IfNotExist, %FirstItem%
-						FileAppend, %A_Now%`tInfo`t"%FirstItem%" not found.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tInfo`t"%FirstItem%" not found.`n, %LogFile%
 					Else	
-						FileAppend, %A_Now%`tWarning`t"%FirstItem%" still exist.`n, %A_Temp%\%FileName%.log	
+						FileAppend, %A_Now%`tWarning`t"%FirstItem%" still exist.`n, %LogFile%
 					}
 				}			
 			If ScriptItem = RegWrite
@@ -813,7 +802,7 @@ Script(Line, AppNumber)
 				Transform, ThirdItem, Deref, %ThirdItem%
 				Transform, FourthItem, Deref, %FourthItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tCreate "%FirstItem%" registry item "%ThirdItem%" in "%SecondItem%" with value "%FourthItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tCreate "%FirstItem%" registry item "%ThirdItem%" in "%SecondItem%" with value "%FourthItem%"...`n, %LogFile%
 				RegWrite, %FirstItem%, %SecondItem%, %ThirdItem%, %FourthItem%
 				If NoLog != 1
 					{
@@ -821,19 +810,19 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)
-						FileAppend, %A_Now%`tWarning`tCreate register item stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tCreate register item stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					RegRead, CheckItem, %SecondItem%, %ThirdItem%
 					If CheckItem
-						FileAppend, %A_Now%`tInfo`t"%SecondItem%\%ThirdItem%" exist.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tInfo`t"%SecondItem%\%ThirdItem%" exist.`n, %LogFile%
 					Else
-						FileAppend, %A_Now%`tWarning`t"%SecondItem%\%ThirdItem%" not found.`n, %A_Temp%\%FileName%.log	
+						FileAppend, %A_Now%`tWarning`t"%SecondItem%\%ThirdItem%" not found.`n, %LogFile%
 					}
 				}
 			If ScriptItem = RegDelete
 				{
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tDelete registry item "%FirstItem%" with value name "%SecondItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tDelete registry item "%FirstItem%" with value name "%SecondItem%"...`n, %LogFile%
 				RegDelete, %FirstItem%, %SecondItem%
 				If NoLog != 1
 					{
@@ -841,13 +830,13 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)				
-						FileAppend, %A_Now%`tWarning`tDelete register item stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tDelete register item stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					RegRead, CheckItem, %FirstItem%, %SecondItem%
 					If CheckItem
-						FileAppend, %A_Now%`tWarning`t"%FirstItem%\%SecondItem%" still exist.`n, %A_Temp%\%FileName%.log
+						FileAppend, %A_Now%`tWarning`t"%FirstItem%\%SecondItem%" still exist.`n, %LogFile%
 					Else
-						FileAppend, %A_Now%`tInfo`t"%FirstItem%\%SecondItem%" not found.`n, %A_Temp%\%FileName%.log							
+						FileAppend, %A_Now%`tInfo`t"%FirstItem%\%SecondItem%" not found.`n, %LogFile%
 					}
 				}
 			If ScriptItem = Run
@@ -855,7 +844,7 @@ Script(Line, AppNumber)
 				Transform, FirstItem, Deref, %FirstItem%
 				Transform, SecondItem, Deref, %SecondItem%
 				If NoLog != 1
-					FileAppend, %A_Now%`tInfo`tRun "%FirstItem%" with working directory "%SecondItem%"...`n, %A_Temp%\%FileName%.log
+					FileAppend, %A_Now%`tInfo`tRun "%FirstItem%" with working directory "%SecondItem%"...`n, %LogFile%
 				If FourthItem != 1
 					RunWait, %FirstItem%, %SecondItem%, %ThirdItem% UseErrorLevel
 				Else
@@ -866,7 +855,7 @@ Script(Line, AppNumber)
 						{
 						ErrorNumber = %A_LastError%
 						ErrorMessage := GetSysErrorText(ErrorNumber)
-						FileAppend, %A_Now%`tWarning`tRunning "%FirstItem%" stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %A_Temp%\%FileName%.log			
+						FileAppend, %A_Now%`tWarning`tRunning "%FirstItem%" stopped with return code: %ErrorNumber% Message: %ErrorMessage%, %LogFile%
 						}
 					}
 				}
